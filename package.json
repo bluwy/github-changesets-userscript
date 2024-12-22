@@ -1,0 +1,17 @@
+{
+  "name": "github-changesets-userscript",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "dev": "node scripts/build.js --watch",
+    "dev-direct": "node scripts/build.js --watch --direct"
+  },
+  "dependencies": {
+    "human-id": "^4.1.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}
