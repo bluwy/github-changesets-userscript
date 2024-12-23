@@ -6,6 +6,8 @@ document.addEventListener('turbo:render', () => run())
 
 async function run() {
   if (await repoHasChangesetsSetup()) {
+    removeChangesetBotComment()
+
     const hasChangesetFiles = await prHasChangesetFiles()
     await addChangesetsLabel(hasChangesetFiles)
   }
@@ -80,5 +82,14 @@ ${prTitle}
   const headerMeta = document.querySelector('.gh-header-meta')
   if (headerMeta) {
     headerMeta.appendChild(anchor)
+  }
+}
+
+function removeChangesetBotComment() {
+  const changesetBotComment = document.querySelector(
+    '.js-timeline-item:has(a.author[href="/apps/changeset-bot"])'
+  )
+  if (changesetBotComment) {
+    changesetBotComment.remove()
   }
 }
