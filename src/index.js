@@ -84,14 +84,10 @@ async function addChangesetSideSection(updatedPackages) {
   if (document.querySelector('.sidebar-changesets')) return
 
   const { humanId } = await import('human-id')
-  const headRef = document.querySelector('.commit-ref.head-ref').textContent
+  const headRef = document.querySelector('.commit-ref.head-ref > a').title
 
-  const orgRepo = headRef.includes(':')
-    ? headRef.split(':')[0].trim()
-    : window.location.pathname.split('/').slice(1, 3).join('/')
-  const branch = headRef.includes(':')
-    ? headRef.split(':')[1].trim()
-    : headRef.trim()
+  const orgRepo = headRef.split(':')[0].trim()
+  const branch = headRef.split(':')[1].trim()
   const prTitle = document.querySelector('.js-issue-title').textContent.trim()
   const changesetFileName = `.changeset/${humanId({
     separator: '-',
