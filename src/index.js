@@ -98,7 +98,7 @@ async function addChangesetSideSection(updatedPackages) {
   // bandwidth to acheive a small QoL improvement. So, skip that for now.
   const changesetFileContent = `\
 ---
-package: patch
+"package": patch
 ---
 
 ${prTitle}
