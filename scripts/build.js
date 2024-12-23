@@ -34,7 +34,7 @@ const ctx = await esbuild[isWatch ? 'context' : 'build']({
 // @version      ${pkg.version}
 // @description  Improve your Changesets experience in GitHub PRs
 // @author       Bjorn Lu
-// @match        https://github.com/*/*/pull/*
+// @match        https://github.com/**
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @grant        none
 // ==/UserScript==

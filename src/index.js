@@ -5,7 +5,10 @@ document.addEventListener('pjax:end', () => run())
 document.addEventListener('turbo:render', () => run())
 
 async function run() {
-  if (await repoHasChangesetsSetup()) {
+  if (
+    /^\/.+?\/.+?\/pull\/.+$/.exec(location.pathname) &&
+    (await repoHasChangesetsSetup())
+  ) {
     removeChangesetBotComment()
 
     const hasChangesetFiles = await prHasChangesetFiles()
