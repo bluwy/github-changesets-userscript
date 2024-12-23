@@ -4,6 +4,8 @@ run()
 document.addEventListener('pjax:end', () => run())
 document.addEventListener('turbo:render', () => run())
 
+/** @typedef {Record<string, ('major' | 'minor' | 'patch')[]>} UpdatedPackages */
+
 async function run() {
   if (
     /^\/.+?\/.+?\/pull\/.+$/.exec(location.pathname) &&
@@ -13,8 +15,8 @@ async function run() {
       removeChangesetBotComment()
     }
 
-    const hasChangesetFiles = await prHasChangesetFiles()
-    await addChangesetsLabel(hasChangesetFiles)
+    const updatedPackages = await prHasChangesetFiles()
+    await addChangesetSideSection(updatedPackages)
   }
 }
 
@@ -36,6 +38,9 @@ async function repoHasChangesetsSetup() {
   return result
 }
 
+/**
+ * @returns {Promise<UpdatedPackages>} packages to be bumped
+ */
 async function prHasChangesetFiles() {
   const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
   const prNumber = window.location.pathname.split('/').pop()
@@ -52,17 +57,31 @@ async function prHasChangesetFiles() {
 
   const cacheKey = `github-changesets-userscript:prHasChangesetFiles-${orgRepo}-${prNumber}-${prCommitSha}`
   const cacheValue = sessionStorage.getItem(cacheKey)
-  if (cacheValue) return cacheValue === 'true'
+  if (cacheValue) return JSON.parse(cacheValue)
 
   const filesUrl = `https://api.github.com/repos/${orgRepo}/pulls/${prNumber}/files`
   const response = await fetch(filesUrl)
   const files = await response.json()
-  const result = files.some((file) => file.filename.startsWith('.changeset/'))
-  sessionStorage.setItem(cacheKey, result)
-  return result
+  const hasChangesetFiles = files.some((file) =>
+    file.filename.startsWith('.changeset/')
+  )
+  if (hasChangesetFiles) {
+    const updatedPackages = getUpdatedPackagesFromAddedChangedFiles(files)
+    sessionStorage.setItem(cacheKey, JSON.stringify(updatedPackages))
+    return updatedPackages
+  } else {
+    sessionStorage.setItem(cacheKey, '{}')
+    return {}
+  }
 }
 
-async function addChangesetsLabel(hasChangesets) {
+/**
+ * @param {UpdatedPackages} updatedPackages
+ */
+async function addChangesetSideSection(updatedPackages) {
+  // if already added, return
+  if (document.querySelector('.sidebar-changesets')) return
+
   const { humanId } = await import('human-id')
   const headRef = document.querySelector('.commit-ref.head-ref').title
 
@@ -75,27 +94,50 @@ async function addChangesetsLabel(hasChangesets) {
   })}.md`
   const changesetFileContent = `\
 ---
-@fake-scope/fake-pkg: patch
+pkg: patch
 ---
 
 ${prTitle}
 `
 
-  const anchor = document.createElement('a')
-  anchor.textContent = hasChangesets ? 'Has changesets' : '⚠ No changesets'
-  anchor.className = 'IssueLabel hx_IssueLabel mb-2 ml-2'
-  // light green if has changesets, yellow if no changesets
-  anchor.style.cssText = hasChangesets
-    ? '--label-r:162;--label-g:239;--label-b:162;--label-h:120;--label-s:70;--label-l:78;'
-    : '--label-r:239;--label-g:239;--label-b:162;--label-h:60;--label-s:70;--label-l:78;'
+  const canEditPr = document.querySelector('button.js-title-edit-button')
+  const notificationsSideSection = document.querySelector(
+    '.discussion-sidebar-item.sidebar-notifications'
+  )
 
-  // prettier-ignore
-  anchor.href = `https://github.com/${orgRepo}/new/${branch}?filename=${changesetFileName}&value=${encodeURIComponent(changesetFileContent)}`
+  const plusIcon = `<svg class="octicon octicon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"></path></svg>`
 
-  const headerMeta = document.querySelector('.gh-header-meta')
-  if (headerMeta) {
-    headerMeta.appendChild(anchor)
-  }
+  // add new section just before the notifications section
+  const html = `\
+${
+  canEditPr
+    ? `<a class="d-block text-bold discussion-sidebar-heading discussion-sidebar-toggle" href="https://github.com/${orgRepo}/new/${branch}?filename=${changesetFileName}&value=${encodeURIComponent(
+        changesetFileContent
+      )}">Changesets\n${plusIcon}</a>`
+    : `<div class="d-block text-bold discussion-sidebar-heading">Changesets</div>`
+}
+${
+  Object.keys(updatedPackages).length
+    ? `\
+<table style="width: 100%">
+  <tbody>
+    ${Object.entries(updatedPackages)
+      .map(
+        ([pkg, bumps]) =>
+          `<tr><td>${pkg}</td><td class="color-fg-muted">${bumps.join(
+            ', '
+          )}</td></tr>`
+      )
+      .join('')}
+  </tbody>  
+</table>`
+    : ''
+}`
+
+  const changesetSideSection = document.createElement('div')
+  changesetSideSection.className = 'discussion-sidebar-item sidebar-changesets'
+  changesetSideSection.innerHTML = html
+  notificationsSideSection.before(changesetSideSection)
 }
 
 function removeChangesetBotComment() {
@@ -105,4 +147,26 @@ function removeChangesetBotComment() {
   if (changesetBotComment) {
     changesetBotComment.remove()
   }
+}
+
+// TODO: validate if not match major/minor/patch
+function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
+  /** @type {UpdatedPackages} */
+  const map = {}
+  for (const file of changedFiles) {
+    if (file.filename.startsWith('.changeset/') && file.status === 'added') {
+      const yaml = /---.+---/s.exec(file.patch)?.[0]
+      console.log(file.patch, yaml)
+      if (!yaml) continue
+      const matched = yaml.matchAll(/\+(.+?):\s*(major|minor|patch)\n/g)
+      for (const match of matched) {
+        const pkg = match[1].replace(/^['"]|['"]$/g, '')
+        const bump = match[2]
+        const packages = map[pkg] || []
+        packages.push(bump)
+        map[pkg] = packages
+      }
+    }
+  }
+  return map
 }
