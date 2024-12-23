@@ -93,6 +93,9 @@ async function addChangesetSideSection(updatedPackages) {
     separator: '-',
     capitalize: false,
   })}.md`
+  // NOTE: it's possible to fetch the git tree and figure out the possible package names
+  // based on the PR diff for the default frontmatter, but it's a lot of work, code, and
+  // bandwidth to acheive a small QoL improvement. So, skip that for now.
   const changesetFileContent = `\
 ---
 package: patch
