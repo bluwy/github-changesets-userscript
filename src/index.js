@@ -35,7 +35,17 @@ async function prHasChangesetFiles() {
   const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
   const prNumber = window.location.pathname.split('/').pop()
 
-  const cacheKey = `github-changesets-userscript:prHasChangesetFiles-${orgRepo}-${prNumber}`
+  // get pr commit sha for cache key
+  const allCommitTimeline = document.querySelectorAll(
+    '.js-timeline-item:has(svg.octicon-git-commit) a.markdown-title'
+  )
+  const prCommitSha = allCommitTimeline[allCommitTimeline.length - 1].href
+    .split('/')
+    .slice(-1)
+    .join('')
+    .slice(0, 7)
+
+  const cacheKey = `github-changesets-userscript:prHasChangesetFiles-${orgRepo}-${prNumber}-${prCommitSha}`
   const cacheValue = sessionStorage.getItem(cacheKey)
   if (cacheValue) return cacheValue === 'true'
 
