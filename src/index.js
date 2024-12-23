@@ -9,7 +9,9 @@ async function run() {
     /^\/.+?\/.+?\/pull\/.+$/.exec(location.pathname) &&
     (await repoHasChangesetsSetup())
   ) {
-    removeChangesetBotComment()
+    if (shouldRemoveChangesetBotComment) {
+      removeChangesetBotComment()
+    }
 
     const hasChangesetFiles = await prHasChangesetFiles()
     await addChangesetsLabel(hasChangesetFiles)
@@ -86,8 +88,6 @@ ${prTitle}
   anchor.style.cssText = hasChangesets
     ? '--label-r:162;--label-g:239;--label-b:162;--label-h:120;--label-s:70;--label-l:78;'
     : '--label-r:239;--label-g:239;--label-b:162;--label-h:60;--label-s:70;--label-l:78;'
-
-  // '--label-r:162;--label-g:238;--label-b:239;--label-h:180;--label-s:70;--label-l:78;'
 
   // prettier-ignore
   anchor.href = `https://github.com/${orgRepo}/new/${branch}?filename=${changesetFileName}&value=${encodeURIComponent(changesetFileContent)}`
