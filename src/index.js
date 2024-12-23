@@ -17,18 +17,32 @@ async function repoHasChangesetsSetup() {
     .querySelector('.commit-ref.base-ref')
     .title.split(':')[1]
     .trim()
+
+  const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${orgRepo}-${baseBranch}`
+  const cacheValue = sessionStorage.getItem(cacheKey)
+  if (cacheValue) return cacheValue === 'true'
+
   const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${baseBranch}/.changeset`
-  const result = await fetch(changesetsFolderUrl, { method: 'HEAD' })
-  return result.status === 200
+  const response = await fetch(changesetsFolderUrl, { method: 'HEAD' })
+  const result = response.status === 200
+  sessionStorage.setItem(cacheKey, result)
+  return result
 }
 
 async function prHasChangesetFiles() {
   const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
   const prNumber = window.location.pathname.split('/').pop()
+
+  const cacheKey = `github-changesets-userscript:prHasChangesetFiles-${orgRepo}-${prNumber}`
+  const cacheValue = sessionStorage.getItem(cacheKey)
+  if (cacheValue) return cacheValue === 'true'
+
   const filesUrl = `https://api.github.com/repos/${orgRepo}/pulls/${prNumber}/files`
   const response = await fetch(filesUrl)
   const files = await response.json()
-  return files.some((file) => file.filename.startsWith('.changeset/'))
+  const result = files.some((file) => file.filename.startsWith('.changeset/'))
+  sessionStorage.setItem(cacheKey, result)
+  return result
 }
 
 async function addChangesetsLabel(hasChangesets) {
