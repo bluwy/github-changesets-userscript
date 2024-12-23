@@ -1,6 +1,6 @@
 # GitHub Changesets (UserScript)
 
-[Install on Greasyfork](https://greasyfork.org)
+[Install on Greasyfork](https://greasyfork.org/en/scripts/521590-github-changesets)
 
 In a GitHub repository that uses [Changesets](https://github.com/changesets/changesets), this userscript adds a new "Changesets" section in the sidebar of pull requests. This makes it easy to view the changesets added in a PR, and add new changesets directly.
 
