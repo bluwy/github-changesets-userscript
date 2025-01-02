@@ -4,7 +4,8 @@ run()
 document.addEventListener('pjax:end', () => run())
 document.addEventListener('turbo:render', () => run())
 
-/** @typedef {Record<string, ('major' | 'minor' | 'patch')[]>} UpdatedPackages */
+/** @typedef {{ type: 'major' | 'minor' | 'patch', diff?: string }} PackageBumpInfo */
+/** @typedef {Record<string, PackageBumpInfo[]>} UpdatedPackages */
 
 async function run() {
   if (
@@ -69,7 +70,7 @@ async function prHasChangesetFiles() {
     file.filename.startsWith('.changeset/')
   )
   if (hasChangesetFiles) {
-    const updatedPackages = getUpdatedPackagesFromAddedChangedFiles(files)
+    const updatedPackages = await getUpdatedPackagesFromAddedChangedFiles(files)
     sessionStorage.setItem(cacheKey, JSON.stringify(updatedPackages))
     return updatedPackages
   } else {
@@ -122,12 +123,23 @@ ${prTitle}
 <table style="width: 100%; max-width: 400px;">
   <tbody>
     ${Object.entries(updatedPackages)
-      .map(
-        ([pkg, bumps]) =>
-          `<tr><td style="width: 1px; white-space: nowrap; padding-right: 8px;">${pkg}</td><td class="color-fg-muted">${bumps.join(
-            ', '
-          )}</td></tr>`
-      )
+      .map(([pkg, bumpInfos]) => {
+        const bumpElements = bumpInfos.map((info) => {
+          if (info.diff) {
+            return `<a class="Link--muted" href="${
+              location.origin + location.pathname
+            }/files#diff-${info.diff}">${info.type}</a>`
+          } else {
+            return info.type
+          }
+        })
+
+        return `\
+<tr>
+  <td style="width: 1px; white-space: nowrap; padding-right: 8px;">${pkg}</td>
+  <td class="color-fg-muted">${bumpElements.join(', ')}</td>
+</tr>`
+      })
       .join('')}
   </tbody>  
 </table>`
@@ -149,22 +161,66 @@ function removeChangesetBotComment() {
 }
 
 // TODO: validate if not match major/minor/patch
-function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
+async function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
   /** @type {UpdatedPackages} */
   const map = {}
   for (const file of changedFiles) {
     if (file.filename.startsWith('.changeset/') && file.status === 'added') {
-      const yaml = /---.+---/s.exec(file.patch)?.[0]
-      if (!yaml) continue
-      const matched = yaml.matchAll(/\+(.+?):\s*(major|minor|patch)\n/g)
-      for (const match of matched) {
-        const pkg = match[1].replace(/^['"]|['"]$/g, '')
-        const bump = match[2]
+      const lines = parseAddedPatchStringAsLines(file.patch)
+
+      let isInYaml = false
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        if (line === '---') {
+          isInYaml = !isInYaml
+          if (isInYaml) continue
+          else break
+        }
+
+        const match = /^['"](.+?)['"]:\s*(major|minor|patch)\s*$/.exec(line)
+        if (!match) continue
+        const pkg = match[1]
+        const type = match[2]
+        const diff = await getAddedDiff(file.filename, i + 1)
         const packages = map[pkg] || []
-        packages.push(bump)
+        packages.push({ type, diff })
         map[pkg] = packages
       }
     }
   }
   return map
+}
+
+/**
+ * @param {string} patch
+ */
+function parseAddedPatchStringAsLines(patch) {
+  return patch
+    .replace(/^@@.*?@@$\n/m, '') // remove leading "@@ -0,0 +1,5 @@" annotation
+    .replace(/^\+/gm, '') // remove leading "+"
+    .split('\n')
+}
+
+/**
+ * @param {string} filename
+ * @param {number} line 1-based
+ */
+async function getAddedDiff(filename, line) {
+  if (window.isSecureContext && window.crypto && window.crypto.subtle) {
+    // how to get the diff link: https://github.com/orgs/community/discussions/55764
+    const filenameSha256 = await sha256(filename)
+    return `${filenameSha256}R${line}`
+  }
+}
+
+/**
+ * @param {string} message
+ */
+async function sha256(message) {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return hashHex
 }
