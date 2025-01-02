@@ -84,6 +84,7 @@ async function prHasChangesetFiles() {
  */
 async function addChangesetSideSection(updatedPackages) {
   const { humanId } = await import('human-id')
+  updatedPackages = sortUpdatedPackages(updatedPackages)
   const headRef = document.querySelector('.commit-ref.head-ref > a').title
 
   const orgRepo = headRef.split(':')[0].trim()
@@ -136,7 +137,7 @@ ${prTitle}
 
         return `\
 <tr>
-  <td style="width: 1px; white-space: nowrap; padding-right: 8px;">${pkg}</td>
+  <td style="width: 1px; white-space: nowrap; padding-right: 8px; vertical-align: top;">${pkg}</td>
   <td class="color-fg-muted">${bumpElements.join(', ')}</td>
 </tr>`
       })
@@ -223,4 +224,20 @@ async function sha256(message) {
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   return hashHex
+}
+
+/**
+ * @param {UpdatedPackages} map
+ */
+function sortUpdatedPackages(map) {
+  const newMap = {}
+  for (const key of Object.keys(map).sort()) {
+    // Sort major, then minor, then patch
+    const order = { major: 1, minor: 2, patch: 3 }
+    const value = [...map[key]].sort((a, b) => {
+      return order[a.type] - order[b.type]
+    })
+    newMap[key] = value
+  }
+  return newMap
 }
