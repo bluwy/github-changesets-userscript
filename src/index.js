@@ -9,6 +9,8 @@ document.addEventListener('turbo:render', () => run())
 async function run() {
   if (
     /^\/.+?\/.+?\/pull\/.+$/.exec(location.pathname) &&
+    // Skip if sidebar is already added
+    !document.querySelector('.sidebar-changesets') &&
     (await repoHasChangesetsSetup())
   ) {
     if (shouldRemoveChangesetBotComment) {
@@ -30,7 +32,7 @@ async function repoHasChangesetsSetup() {
 
   const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${orgRepo}-${baseBranch}`
   const cacheValue = sessionStorage.getItem(cacheKey)
-  if (cacheValue) return cacheValue === 'true'
+  if (!shouldSkipCache && cacheValue) return cacheValue === 'true'
 
   const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${baseBranch}/.changeset`
   const response = await fetch(changesetsFolderUrl, { method: 'HEAD' })
@@ -58,7 +60,7 @@ async function prHasChangesetFiles() {
 
   const cacheKey = `github-changesets-userscript:prHasChangesetFiles-${orgRepo}-${prNumber}-${prCommitSha}`
   const cacheValue = sessionStorage.getItem(cacheKey)
-  if (cacheValue) return JSON.parse(cacheValue)
+  if (!shouldSkipCache && cacheValue) return JSON.parse(cacheValue)
 
   const filesUrl = `https://api.github.com/repos/${orgRepo}/pulls/${prNumber}/files`
   const response = await fetch(filesUrl)
@@ -80,9 +82,6 @@ async function prHasChangesetFiles() {
  * @param {UpdatedPackages} updatedPackages
  */
 async function addChangesetSideSection(updatedPackages) {
-  // if already added, return
-  if (document.querySelector('.sidebar-changesets')) return
-
   const { humanId } = await import('human-id')
   const headRef = document.querySelector('.commit-ref.head-ref > a').title
 

@@ -41,6 +41,7 @@ const ctx = await esbuild[isWatch ? 'context' : 'build']({
 
 // Options
 const shouldRemoveChangesetBotComment = true
+const shouldSkipCache = true
 
 ;`,
   },

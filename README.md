@@ -1,4 +1,4 @@
-# GitHub Changesets (UserScript)
+# Userscript: GitHub Changesets
 
 [Install on Greasyfork](https://greasyfork.org/en/scripts/521590-github-changesets)
 
