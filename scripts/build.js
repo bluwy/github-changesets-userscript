@@ -32,7 +32,7 @@ const ctx = await esbuild[isWatch ? 'context' : 'build']({
 // @supportURL   https://github.com/bluwy/github-changesets-userscript
 // @namespace    https://greasyfork.org/
 // @version      ${pkg.version}
-// @description  Improve your Changesets experience in GitHub PRs
+// @description  Improve the Changesets experience in GitHub PRs
 // @author       Bjorn Lu
 // @match        https://github.com/**
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
