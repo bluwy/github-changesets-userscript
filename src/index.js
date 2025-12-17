@@ -11,7 +11,7 @@ async function run() {
   if (
     /^\/.+?\/.+?\/pull\/.+$/.exec(location.pathname) &&
     // Skip if sidebar is already added
-    !document.querySelector('.sidebar-changesets') &&
+    !hasSidebarSection() &&
     (await repoHasChangesetsSetup())
   ) {
     if (shouldRemoveChangesetBotComment) {
@@ -146,10 +146,17 @@ ${prTitle}
 </table>`
   }
 
+  // Check one last time if the sidebar section already exist, we already check in `run()`, but
+  // sometimes GitHub can trigger reruns multiple times causing this to be called multiple times too
+  if (hasSidebarSection()) return
   const changesetSideSection = document.createElement('div')
   changesetSideSection.className = 'discussion-sidebar-item sidebar-changesets'
   changesetSideSection.innerHTML = html
   notificationsSideSection.before(changesetSideSection)
+}
+
+function hasSidebarSection() {
+  return !!document.querySelector('.sidebar-changesets')
 }
 
 function removeChangesetBotComment() {
