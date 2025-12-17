@@ -30,7 +30,7 @@ const ctx = await esbuild[isWatch ? 'context' : 'build']({
 // @license      MIT
 // @homepageURL  https://github.com/bluwy/github-changesets-userscript
 // @supportURL   https://github.com/bluwy/github-changesets-userscript
-// @namespace    https://greasyfork.org/
+// @namespace    https://greasyfork.org/en/scripts/521590-github-changesets
 // @version      ${pkg.version}
 // @description  Improve the Changesets experience in GitHub PRs
 // @author       Bjorn Lu
