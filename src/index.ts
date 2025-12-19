@@ -4,8 +4,20 @@ run()
 document.addEventListener('pjax:end', () => run())
 document.addEventListener('turbo:render', () => run())
 
-/** @typedef {{ type: 'major' | 'minor' | 'patch', diff?: string }} PackageBumpInfo */
-/** @typedef {Record<string, PackageBumpInfo[]>} UpdatedPackages */
+type BumpType = 'major' | 'minor' | 'patch'
+
+interface PackageBumpInfo {
+  type: BumpType
+  diff?: string
+}
+
+type UpdatedPackages = Record<string, PackageBumpInfo[]>
+
+interface GitHubFile {
+  filename: string
+  status: string
+  patch: string
+}
 
 async function run() {
   if (
@@ -27,9 +39,10 @@ async function repoHasChangesetsSetup() {
   const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
   // ideally `.base-ref` should also be used, but it's not added when a pr is closed/merged
   const baseBranch = document
-    .querySelector('.commit-ref')
-    .title.split(':')[1]
+    .querySelector<HTMLElement>('.commit-ref')
+    ?.title.split(':')[1]
     .trim()
+  if (!baseBranch) return false
 
   const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${orgRepo}-${baseBranch}`
   const cacheValue = sessionStorage.getItem(cacheKey)
@@ -38,7 +51,7 @@ async function repoHasChangesetsSetup() {
   const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${baseBranch}/.changeset`
   const response = await fetch(changesetsFolderUrl, { method: 'HEAD' })
   const result = response.status === 200
-  sessionStorage.setItem(cacheKey, result)
+  sessionStorage.setItem(cacheKey, result + '')
   return result
 }
 
@@ -50,7 +63,7 @@ async function prHasChangesetFiles() {
   const prNumber = window.location.pathname.split('/').pop()
 
   // get pr commit sha for cache key
-  const allCommitTimeline = document.querySelectorAll(
+  const allCommitTimeline = document.querySelectorAll<HTMLAnchorElement>(
     '.js-timeline-item:has(svg.octicon-git-commit) a.markdown-title'
   )
   const prCommitSha = allCommitTimeline[allCommitTimeline.length - 1].href
@@ -65,7 +78,7 @@ async function prHasChangesetFiles() {
 
   const filesUrl = `https://api.github.com/repos/${orgRepo}/pulls/${prNumber}/files`
   const response = await fetch(filesUrl)
-  const files = await response.json()
+  const files: GitHubFile[] = await response.json()
   const hasChangesetFiles = files.some((file) =>
     file.filename.startsWith('.changeset/')
   )
@@ -79,17 +92,17 @@ async function prHasChangesetFiles() {
   }
 }
 
-/**
- * @param {UpdatedPackages} updatedPackages
- */
-async function addChangesetSideSection(updatedPackages) {
+async function addChangesetSideSection(updatedPackages: UpdatedPackages) {
   const { humanId } = await import('human-id')
   updatedPackages = sortUpdatedPackages(updatedPackages)
-  const headRef = document.querySelector('.commit-ref.head-ref > a').title
+  const headRef = document.querySelector<HTMLElement>(
+    '.commit-ref.head-ref > a'
+  )?.title
+  if (!headRef) return
 
   const orgRepo = headRef.split(':')[0].trim()
   const branch = headRef.split(':')[1].trim()
-  const prTitle = document.querySelector('.js-issue-title').textContent.trim()
+  const prTitle = document.querySelector('.js-issue-title')?.textContent.trim()
   const changesetFileName = `.changeset/${humanId({
     separator: '-',
     capitalize: false,
@@ -110,6 +123,7 @@ ${prTitle}
   const notificationsSideSection = document.querySelector(
     '.discussion-sidebar-item.sidebar-notifications'
   )
+  if (!notificationsSideSection) return
   const plusIcon = `<svg class="octicon octicon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"></path></svg>`
 
   // add new section just before the notifications section
@@ -168,12 +182,10 @@ function removeChangesetBotComment() {
   }
 }
 
-/**
- * @param {{ filename: string, status: string, patch: string }[]} changedFiles
- */
-async function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
-  /** @type {UpdatedPackages} */
-  const map = {}
+async function getUpdatedPackagesFromAddedChangedFiles(
+  changedFiles: GitHubFile[]
+) {
+  const map: UpdatedPackages = {}
   for (const file of changedFiles) {
     if (file.filename.startsWith('.changeset/') && file.status === 'added') {
       const lines = parseAddedPatchStringAsLines(file.patch)
@@ -190,7 +202,7 @@ async function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
         const match = /^['"](.+?)['"]:\s*(major|minor|patch)\s*$/.exec(line)
         if (!match) continue
         const pkg = match[1]
-        const type = /** @type {PackageBumpInfo['type']} */ match[2]
+        const type = match[2] as BumpType
         const diff = await getAddedDiff(file.filename, i + 1)
         const packages = map[pkg] || []
         packages.push({ type, diff })
@@ -201,10 +213,7 @@ async function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
   return map
 }
 
-/**
- * @param {string} patch
- */
-function parseAddedPatchStringAsLines(patch) {
+function parseAddedPatchStringAsLines(patch: string) {
   return patch
     .replace(/^@@.*?@@$\n/m, '') // remove leading "@@ -0,0 +1,5 @@" annotation
     .replace(/^\+/gm, '') // remove leading "+"
@@ -212,10 +221,10 @@ function parseAddedPatchStringAsLines(patch) {
 }
 
 /**
- * @param {string} filename
- * @param {number} line 1-based
+ * @param filename
+ * @param line 1-based
  */
-async function getAddedDiff(filename, line) {
+async function getAddedDiff(filename: string, line: number) {
   if (window.isSecureContext && window.crypto && window.crypto.subtle) {
     // how to get the diff link: https://github.com/orgs/community/discussions/55764
     const filenameSha256 = await sha256(filename)
@@ -223,10 +232,7 @@ async function getAddedDiff(filename, line) {
   }
 }
 
-/**
- * @param {string} message
- */
-async function sha256(message) {
+async function sha256(message: string) {
   const encoder = new TextEncoder()
   const data = encoder.encode(message)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
@@ -235,13 +241,8 @@ async function sha256(message) {
   return hashHex
 }
 
-/**
- * @param {UpdatedPackages} map
- * @return {UpdatedPackages}
- */
-function sortUpdatedPackages(map) {
-  /** @type {UpdatedPackages} */
-  const newMap = {}
+function sortUpdatedPackages(map: UpdatedPackages): UpdatedPackages {
+  const newMap: UpdatedPackages = {}
   for (const key of Object.keys(map).sort()) {
     // Sort major, then minor, then patch
     const order = { major: 1, minor: 2, patch: 3 }
