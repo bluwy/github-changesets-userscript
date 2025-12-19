@@ -32,7 +32,7 @@ async function run() {
 
     const updatedPackages = await prHasChangesetFiles()
     await addChangesetSideSection(updatedPackages)
-    await addChangesetMergeWarning()
+    await addChangesetMergeWarning(updatedPackages)
   }
 }
 
@@ -58,9 +58,9 @@ async function repoHasChangesetsSetup() {
 }
 
 /**
- * @returns {Promise<UpdatedPackages>} packages to be bumped
+ * @returns packages to be bumped
  */
-async function prHasChangesetFiles() {
+async function prHasChangesetFiles(): Promise<UpdatedPackages> {
   const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
   const prNumber = window.location.pathname.split('/').pop()
 
@@ -157,7 +157,8 @@ function removeChangesetBotComment() {
   }
 }
 
-async function addChangesetMergeWarning() {
+async function addChangesetMergeWarning(updatedPackages: UpdatedPackages) {
+  if (Object.keys(updatedPackages).length > 0) return
   if (hasChangesetMergeWarning()) return
 
   const createLink = await getCreateChangesetLink()

@@ -23,6 +23,10 @@ Multiple changesets:
 
 <img src="https://github.com/user-attachments/assets/29efcd73-9a0a-4ecf-a7c6-f0cc3cd08f68" width="280">
 
+A warning is shown if there's no changesets:
+
+<img src="https://github.com/user-attachments/assets/1c1fe3b8-0965-41e1-8697-7d2bfcdec158" height="160" >
+
 ## Sponsors
 
 <p align="center">
