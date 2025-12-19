@@ -32,6 +32,7 @@ async function run() {
 
     const updatedPackages = await prHasChangesetFiles()
     await addChangesetSideSection(updatedPackages)
+    await addChangesetMergeWarning()
   }
 }
 
@@ -93,46 +94,19 @@ async function prHasChangesetFiles() {
 }
 
 async function addChangesetSideSection(updatedPackages: UpdatedPackages) {
-  const { humanId } = await import('human-id')
   updatedPackages = sortUpdatedPackages(updatedPackages)
-  const headRef = document.querySelector<HTMLElement>(
-    '.commit-ref.head-ref > a'
-  )?.title
-  if (!headRef) return
 
-  const orgRepo = headRef.split(':')[0].trim()
-  const branch = headRef.split(':')[1].trim()
-  const prTitle = document.querySelector('.js-issue-title')?.textContent.trim()
-  const changesetFileName = `.changeset/${humanId({
-    separator: '-',
-    capitalize: false,
-  })}.md`
-  // NOTE: it's possible to fetch the git tree and figure out the possible package names
-  // based on the PR diff for the default frontmatter, but it's a lot of work, code, and
-  // bandwidth to acheive a small QoL improvement. So, skip that for now.
-  const changesetFileContent = `\
----
-"package": patch
----
-
-${prTitle}
-`
-
-  const canEditPr = !!document.querySelector('button.js-title-edit-button')
-  const isPrOpen = !!document.querySelector('.gh-header .State.State--open')
   const notificationsSideSection = document.querySelector(
     '.discussion-sidebar-item.sidebar-notifications'
   )
   if (!notificationsSideSection) return
   const plusIcon = `<svg class="octicon octicon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"></path></svg>`
+  const createLink = await getCreateChangesetLink()
 
   // add new section just before the notifications section
-  let html =
-    canEditPr && isPrOpen
-      ? `<a class="d-block text-bold discussion-sidebar-heading discussion-sidebar-toggle" href="https://github.com/${orgRepo}/new/${branch}?filename=${changesetFileName}&value=${encodeURIComponent(
-          changesetFileContent
-        )}">Changesets\n${plusIcon}</a>`
-      : `<div class="d-block text-bold discussion-sidebar-heading">Changesets</div>`
+  let html = createLink
+    ? `<a class="d-block text-bold discussion-sidebar-heading discussion-sidebar-toggle" href="${createLink}">Changesets\n${plusIcon}</a>`
+    : `<div class="d-block text-bold discussion-sidebar-heading">Changesets</div>`
   if (Object.keys(updatedPackages).length) {
     html += `\
 <table style="width: 100%; max-width: 400px;">
@@ -180,6 +154,83 @@ function removeChangesetBotComment() {
   if (changesetBotComment) {
     changesetBotComment.remove()
   }
+}
+
+async function addChangesetMergeWarning() {
+  if (hasChangesetMergeWarning()) return
+
+  const createLink = await getCreateChangesetLink()
+  if (!createLink) return
+
+  const warning = document.createElement('span')
+  const warningIcon = `<svg class="octicon octicon-alert mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>`
+
+  // These styles are beyond disgusting, sorry not sorry
+  warning.className =
+    'warning-changesets d-block position-absolute fgColor-attention text-small ml-md-6 pl-md-4 pl-1'
+  warning.style.marginTop = '-2.6rem'
+  warning.innerHTML = `\
+    ${warningIcon}
+    <span>No changesets found.</span>
+    <a class="Link--muted Link--inTextBlock" href="${createLink}">Create new</a>
+  `
+
+  const mergeBox = document.querySelector('.merge-pr')
+  if (!mergeBox) return
+
+  if (hasChangesetMergeWarning()) return
+  mergeBox.insertAdjacentElement('afterend', warning)
+}
+
+function hasChangesetMergeWarning() {
+  return !!document.querySelector('.warning-changesets')
+}
+
+// Implement temporary cache as the function may be called multiple times on the page
+const createChangesetLinkCache: Record<string, string> = {}
+
+async function getCreateChangesetLink() {
+  const canEditPr = !!document.querySelector('button.js-title-edit-button')
+  const isPrOpen = !!document.querySelector('.gh-header .State.State--open')
+  // No longer possible to create changeset
+  if (!canEditPr || !isPrOpen) {
+    return null
+  }
+
+  const headRef = document.querySelector<HTMLElement>(
+    '.commit-ref.head-ref > a'
+  )?.title
+  if (!headRef) return null
+  const orgRepo = headRef.split(':')[0].trim()
+  const branch = headRef.split(':')[1].trim()
+  const prTitle = document.querySelector('.js-issue-title')?.textContent.trim()
+
+  const key = `${orgRepo}-${branch}`
+  if (createChangesetLinkCache[key]) {
+    return createChangesetLinkCache[key]
+  }
+
+  const { humanId } = await import('human-id')
+  const changesetFileName = `.changeset/${humanId({
+    separator: '-',
+    capitalize: false,
+  })}.md`
+
+  // NOTE: it's possible to fetch the git tree and figure out the possible package names
+  // based on the PR diff for the default frontmatter, but it's a lot of work, code, and
+  // bandwidth to acheive a small QoL improvement. So, skip that for now.
+  const changesetFileContent = `\
+---
+"package": patch
+---
+
+${prTitle}
+`
+
+  const encodedContent = encodeURIComponent(changesetFileContent)
+  const link = `https://github.com/${orgRepo}/new/${branch}?filename=${changesetFileName}&value=${encodedContent}`
+  createChangesetLinkCache[key] = link
+  return link
 }
 
 async function getUpdatedPackagesFromAddedChangedFiles(

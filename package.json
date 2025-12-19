@@ -8,10 +8,10 @@
   "type": "module",
     "repository": {
     "type": "git",
-    "url": "git+https://github.com/bluwy/npm-userscript.git"
+    "url": "git+https://github.com/bluwy/github-changesets-userscript.git"
   },
   "bugs": {
-    "url": "https://github.com/bluwy/npm-userscript/issues"
+    "url": "https://github.com/bluwy/github-changesets-userscript/issues"
   },
   "scripts": {
     "dev": "node ./scripts/build.ts dev",
