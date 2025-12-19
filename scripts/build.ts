@@ -1,0 +1,24 @@
+import { build, getUserscriptManagerOutDir } from '@bluwy/usb'
+
+await build({
+  input: 'src/index.ts',
+  outDir: 'dist',
+  copyOutDir: [getUserscriptManagerOutDir('Userscripts')],
+  watch: process.argv[2] === 'dev',
+  userscriptMeta: {
+    name: 'GitHub Changesets',
+    namespace: 'https://greasyfork.org/en/scripts/521590-github-changesets',
+    match: 'https://github.com/**',
+    icon: 'https://www.google.com/s2/favicons?sz=64&domain=github.com',
+    grant: 'none',
+  },
+  esbuildOptions: {
+    banner: {
+      js: `
+// Options
+const shouldRemoveChangesetBotComment = true
+const shouldSkipCache = false
+`,
+    },
+  },
+})

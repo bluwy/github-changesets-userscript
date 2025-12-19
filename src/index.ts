@@ -168,7 +168,9 @@ function removeChangesetBotComment() {
   }
 }
 
-// TODO: validate if not match major/minor/patch
+/**
+ * @param {{ filename: string, status: string, patch: string }[]} changedFiles
+ */
 async function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
   /** @type {UpdatedPackages} */
   const map = {}
@@ -188,7 +190,7 @@ async function getUpdatedPackagesFromAddedChangedFiles(changedFiles) {
         const match = /^['"](.+?)['"]:\s*(major|minor|patch)\s*$/.exec(line)
         if (!match) continue
         const pkg = match[1]
-        const type = match[2]
+        const type = /** @type {PackageBumpInfo['type']} */ match[2]
         const diff = await getAddedDiff(file.filename, i + 1)
         const packages = map[pkg] || []
         packages.push({ type, diff })
@@ -235,8 +237,10 @@ async function sha256(message) {
 
 /**
  * @param {UpdatedPackages} map
+ * @return {UpdatedPackages}
  */
 function sortUpdatedPackages(map) {
+  /** @type {UpdatedPackages} */
   const newMap = {}
   for (const key of Object.keys(map).sort()) {
     // Sort major, then minor, then patch
