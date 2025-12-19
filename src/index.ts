@@ -39,10 +39,7 @@ async function run() {
 async function repoHasChangesetsSetup() {
   const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
   // ideally `.base-ref` should also be used, but it's not added when a pr is closed/merged
-  const baseBranch = document
-    .querySelector<HTMLElement>('.commit-ref')
-    ?.title.split(':')[1]
-    .trim()
+  const baseBranch = document.querySelector<HTMLElement>('.commit-ref')?.title.split(':')[1].trim()
   if (!baseBranch) return false
 
   const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${orgRepo}-${baseBranch}`
@@ -66,7 +63,7 @@ async function prHasChangesetFiles(): Promise<UpdatedPackages> {
 
   // get pr commit sha for cache key
   const allCommitTimeline = document.querySelectorAll<HTMLAnchorElement>(
-    '.js-timeline-item:has(svg.octicon-git-commit) a.markdown-title'
+    '.js-timeline-item:has(svg.octicon-git-commit) a.markdown-title',
   )
   const prCommitSha = allCommitTimeline[allCommitTimeline.length - 1].href
     .split('/')
@@ -81,9 +78,7 @@ async function prHasChangesetFiles(): Promise<UpdatedPackages> {
   const filesUrl = `https://api.github.com/repos/${orgRepo}/pulls/${prNumber}/files`
   const response = await fetch(filesUrl)
   const files: GitHubFile[] = await response.json()
-  const hasChangesetFiles = files.some((file) =>
-    file.filename.startsWith('.changeset/')
-  )
+  const hasChangesetFiles = files.some((file) => file.filename.startsWith('.changeset/'))
   if (hasChangesetFiles) {
     const updatedPackages = await getUpdatedPackagesFromAddedChangedFiles(files)
     sessionStorage.setItem(cacheKey, JSON.stringify(updatedPackages))
@@ -98,7 +93,7 @@ async function addChangesetSideSection(updatedPackages: UpdatedPackages) {
   updatedPackages = sortUpdatedPackages(updatedPackages)
 
   const notificationsSideSection = document.querySelector(
-    '.discussion-sidebar-item.sidebar-notifications'
+    '.discussion-sidebar-item.sidebar-notifications',
   )
   if (!notificationsSideSection) return
   const plusIcon = `<svg class="octicon octicon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"></path></svg>`
@@ -150,7 +145,7 @@ function hasSidebarSection() {
 
 function removeChangesetBotComment() {
   const changesetBotComment = document.querySelector(
-    '.js-timeline-item:has(a.author[href="/apps/changeset-bot"])'
+    '.js-timeline-item:has(a.author[href="/apps/changeset-bot"])',
   )
   if (changesetBotComment) {
     changesetBotComment.remove()
@@ -199,9 +194,7 @@ async function getCreateChangesetLink() {
     return null
   }
 
-  const headRef = document.querySelector<HTMLElement>(
-    '.commit-ref.head-ref > a'
-  )?.title
+  const headRef = document.querySelector<HTMLElement>('.commit-ref.head-ref > a')?.title
   if (!headRef) return null
   const orgRepo = headRef.split(':')[0].trim()
   const branch = headRef.split(':')[1].trim()
@@ -236,9 +229,7 @@ ${prTitle}
   return link
 }
 
-async function getUpdatedPackagesFromAddedChangedFiles(
-  changedFiles: GitHubFile[]
-) {
+async function getUpdatedPackagesFromAddedChangedFiles(changedFiles: GitHubFile[]) {
   const map: UpdatedPackages = {}
   for (const file of changedFiles) {
     if (file.filename.startsWith('.changeset/') && file.status === 'added') {
