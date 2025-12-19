@@ -49,7 +49,8 @@ async function repoHasChangesetsSetup() {
   const cacheValue = sessionStorage.getItem(cacheKey)
   if (!shouldSkipCache && cacheValue) return cacheValue === 'true'
 
-  const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${baseBranch}/.changeset`
+  const encodedBaseBranch = encodeGitHubURI(baseBranch)
+  const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${encodedBaseBranch}/.changeset`
   const response = await fetch(changesetsFolderUrl, { method: 'HEAD' })
   const result = response.status === 200
   sessionStorage.setItem(cacheKey, result + '')
@@ -227,8 +228,9 @@ async function getCreateChangesetLink() {
 ${prTitle}
 `
 
+  const encodedBranch = encodeGitHubURI(branch)
   const encodedContent = encodeURIComponent(changesetFileContent)
-  const link = `https://github.com/${orgRepo}/new/${branch}?filename=${changesetFileName}&value=${encodedContent}`
+  const link = `https://github.com/${orgRepo}/new/${encodedBranch}?filename=${changesetFileName}&value=${encodedContent}`
   createChangesetLinkCache[key] = link
   return link
 }
@@ -303,4 +305,10 @@ function sortUpdatedPackages(map: UpdatedPackages): UpdatedPackages {
     newMap[key] = value
   }
   return newMap
+}
+
+// Branch name may have `#` which interferes with the URL. Replace it away.
+// No need for complete `encodeURI` as the browser can handle it automatically.
+function encodeGitHubURI(uri: string) {
+  return uri.replace('#', '%23')
 }
