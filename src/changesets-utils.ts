@@ -21,7 +21,7 @@ export async function repoHasChangesetsSetup() {
 
   const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${orgRepo}-${baseBranch}`
   const cacheValue = sessionStorage.getItem(cacheKey)
-  if (!shouldSkipCache && cacheValue) return cacheValue === 'true'
+  if (cacheValue) return cacheValue === 'true'
 
   const encodedBaseBranch = encodeGitHubURI(baseBranch)
   const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${encodedBaseBranch}/.changeset`
@@ -47,7 +47,7 @@ export async function getUpdatedPackages(): Promise<UpdatedPackages> {
 
   const cacheKey = `github-changesets-userscript:getUpdatedPackages-${orgRepo}-${prNumber}-${prCommitSha}`
   const cacheValue = sessionStorage.getItem(cacheKey)
-  if (!shouldSkipCache && cacheValue) return JSON.parse(cacheValue)
+  if (cacheValue) return JSON.parse(cacheValue)
 
   const filesUrl = `https://api.github.com/repos/${orgRepo}/pulls/${prNumber}/files`
   const response = await fetch(filesUrl)

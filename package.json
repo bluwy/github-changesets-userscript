@@ -20,7 +20,8 @@
     "format": "prettier --write \"**/*.ts\""
   },
   "dependencies": {
-    "human-id": "^4.1.3"
+    "human-id": "^4.1.3",
+    "uhtml": "^5.0.9"
   },
   "devDependencies": {
     "@bluwy/usb": "^0.1.3",

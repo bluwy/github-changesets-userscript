@@ -2,11 +2,7 @@ import { addMergeWarning } from './features/add-merge-warning.ts'
 import { addSidebarSection } from './features/add-sidebar-section.ts'
 import { removeChangesetBotComment } from './features/remove-changeset-bot-comment.ts'
 import { getUpdatedPackages, repoHasChangesetsSetup } from './changesets-utils.ts'
-
-declare global {
-  const shouldRemoveChangesetBotComment: boolean
-  const shouldSkipCache: boolean
-}
+import { featureSettings } from './settings.ts'
 
 const pageAlreadyRun = new Set<string>()
 
@@ -24,7 +20,7 @@ async function run() {
   ) {
     pageAlreadyRun.add(location.href)
 
-    if (shouldRemoveChangesetBotComment) {
+    if (featureSettings['remove-changeset-bot-comment'].get()) {
       removeChangesetBotComment()
     }
 

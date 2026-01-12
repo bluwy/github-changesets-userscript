@@ -12,13 +12,4 @@ await build({
     icon: 'https://www.google.com/s2/favicons?sz=64&domain=github.com',
     grant: 'none',
   },
-  esbuildOptions: {
-    banner: {
-      js: `
-// Options
-const shouldRemoveChangesetBotComment = true
-const shouldSkipCache = false;
-`,
-    },
-  },
 })
