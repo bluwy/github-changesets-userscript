@@ -6,7 +6,7 @@ If a GitHub repo uses [Changesets](https://github.com/changesets/changesets), th
 
 Compared to the [Changesets bot](https://github.com/changesets/bot), this does not create a comment for each pull requests regarding information about changesets. The goal is to move the burden of creating and managing changesets to the maintainers so that contributors don't have to worry about this, and to also allow better quality changesets.
 
-As such, this userscript will also automatically remove comments from the Changesets bot to reduce noise. (You can edit the script options at the top of the file to disable this behavior if desired)
+As such, this userscript will also automatically remove comments from the Changesets bot to reduce noise. (You can disable this feature in the settings menu if you wish to keep as-is.)
 
 ## Screenshots
 
