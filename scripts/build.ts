@@ -11,5 +11,6 @@ await build({
     match: 'https://github.com/**',
     icon: 'https://www.google.com/s2/favicons?sz=64&domain=github.com',
     grant: 'none',
+    'inject-into': 'content',
   },
 })
