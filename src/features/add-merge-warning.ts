@@ -2,6 +2,7 @@ import { getCreateChangesetLink, type UpdatedPackages } from '../changesets-util
 
 export async function addMergeWarning(updatedPackages: UpdatedPackages) {
   if (Object.keys(updatedPackages).length > 0) return
+  if (isReleasePr()) return
   if (hasChangesetMergeWarning()) return
 
   const createLink = await getCreateChangesetLink()
@@ -45,6 +46,15 @@ export async function addMergeWarning(updatedPackages: UpdatedPackages) {
       warning.style.display = 'none'
     }
   }
+}
+
+function isReleasePr() {
+  const prDescription = document.querySelector('.TimelineItem .comment-body')
+  if (!prDescription) return false
+
+  return prDescription.textContent
+    .trimStart()
+    .startsWith('This PR was opened by the Changesets release GitHub action')
 }
 
 function hasChangesetMergeWarning() {
