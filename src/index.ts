@@ -8,13 +8,13 @@ declare global {
   const shouldSkipCache: boolean
 }
 
+const pageAlreadyRun = new Set<string>()
+
 run()
 
 // listen to github page loaded event
 document.addEventListener('pjax:end', () => run())
 document.addEventListener('turbo:render', () => run())
-
-const pageAlreadyRun = new Set<string>()
 
 async function run() {
   if (

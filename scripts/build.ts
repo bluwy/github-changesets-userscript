@@ -17,7 +17,7 @@ await build({
       js: `
 // Options
 const shouldRemoveChangesetBotComment = true
-const shouldSkipCache = false
+const shouldSkipCache = false;
 `,
     },
   },
