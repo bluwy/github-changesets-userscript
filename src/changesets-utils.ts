@@ -1,3 +1,5 @@
+import { canEditPr, getBaseRef, getHeadRef, isPrOpen } from './utils.ts'
+
 export type BumpType = 'major' | 'minor' | 'patch'
 
 export interface PackageBumpInfo {
@@ -14,17 +16,15 @@ interface GitHubFile {
 }
 
 export async function repoHasChangesetsSetup() {
-  const orgRepo = window.location.pathname.split('/').slice(1, 3).join('/')
-  // ideally `.base-ref` should also be used, but it's not added when a pr is closed/merged
-  const baseBranch = document.querySelector<HTMLElement>('.commit-ref')?.title.split(':')[1].trim()
-  if (!baseBranch) return false
+  const baseRef = getBaseRef()
+  if (!baseRef) return false
 
-  const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${orgRepo}-${baseBranch}`
+  const cacheKey = `github-changesets-userscript:repoHasChangesetsSetup-${baseRef.ownerRepo}-${baseRef.branch}`
   const cacheValue = sessionStorage.getItem(cacheKey)
   if (cacheValue) return cacheValue === 'true'
 
-  const encodedBaseBranch = encodeGitHubURI(baseBranch)
-  const changesetsFolderUrl = `https://github.com/${orgRepo}/tree/${encodedBaseBranch}/.changeset`
+  const encodedBaseBranch = encodeGitHubURI(baseRef.branch)
+  const changesetsFolderUrl = `https://github.com/${baseRef.ownerRepo}/tree/${encodedBaseBranch}/.changeset`
   const response = await fetch(changesetsFolderUrl, { method: 'HEAD' })
   const result = response.status === 200
   sessionStorage.setItem(cacheKey, result + '')
@@ -96,20 +96,20 @@ async function getUpdatedPackagesFromAddedChangedFiles(changedFiles: GitHubFile[
 const createChangesetLinkCache: Record<string, string> = {}
 
 export async function getCreateChangesetLink() {
-  const canEditPr = !!document.querySelector('button.js-title-edit-button')
-  const isPrOpen = !!document.querySelector('.gh-header .State.State--open')
   // No longer possible to create changeset
-  if (!canEditPr || !isPrOpen) {
+  if (!canEditPr() || !isPrOpen()) {
     return null
   }
 
-  const headRef = document.querySelector<HTMLElement>('.commit-ref.head-ref > a')?.title
+  const headRef = getHeadRef()
   if (!headRef) return null
-  const orgRepo = headRef.split(':')[0].trim()
-  const branch = headRef.split(':')[1].trim()
-  const prTitle = document.querySelector('.js-issue-title')?.textContent.trim()
 
-  const key = `${orgRepo}-${branch}`
+  // Query old UI and new UI
+  const prTitle = document
+    .querySelector('.js-issue-title, [class*="prc-PageHeader-Title"] [class*="prc-Text-Text"]')
+    ?.textContent.trim()
+
+  const key = `${headRef.ownerRepo}-${headRef.branch}`
   if (createChangesetLinkCache[key]) {
     return createChangesetLinkCache[key]
   }
@@ -131,9 +131,9 @@ export async function getCreateChangesetLink() {
 ${prTitle}
 `
 
-  const encodedBranch = encodeGitHubURI(branch)
+  const encodedBranch = encodeGitHubURI(headRef.branch)
   const encodedContent = encodeURIComponent(changesetFileContent)
-  const link = `https://github.com/${orgRepo}/new/${encodedBranch}?filename=${changesetFileName}&value=${encodedContent}`
+  const link = `https://github.com/${headRef.ownerRepo}/new/${encodedBranch}?filename=${changesetFileName}&value=${encodedContent}`
   createChangesetLinkCache[key] = link
   return link
 }
