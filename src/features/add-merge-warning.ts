@@ -1,4 +1,5 @@
 import { getCreateChangesetLink, type UpdatedPackages } from '../changesets-utils.ts'
+import { waitForElement } from '../utils.ts'
 
 export async function addMergeWarning(updatedPackages: UpdatedPackages) {
   if (Object.keys(updatedPackages).length > 0) return
@@ -16,7 +17,7 @@ export async function addMergeWarning(updatedPackages: UpdatedPackages) {
   // under the merge box as if it's part of it.
   warning.className =
     'warning-changesets position-absolute fgColor-attention text-small ml-md-6 pl-md-4 pl-1'
-  warning.style.marginTop = '-2.6rem'
+  warning.style.marginTop = '-1.6rem'
   warning.style.display = 'none'
   warning.innerHTML = `\
     ${warningIcon}
@@ -24,7 +25,9 @@ export async function addMergeWarning(updatedPackages: UpdatedPackages) {
     <a class="Link--muted Link--inTextBlock" href="${createLink}">Create new</a>
   `
 
-  const mergeBox = document.querySelector('.merge-pr')
+  const mergeBox = await waitForElement(
+    '.merge-pr, [class*="MergeBox-module__mergePartialContainer"]',
+  )
   if (!mergeBox) return
 
   if (hasChangesetMergeWarning()) return
